@@ -117,6 +117,7 @@ function confirmDelete() {
       }
     })
     .catch((error) => {
+      console.log("Delete error:", error);
       showToast("Error", error.message);
     })
     .finally(() => {

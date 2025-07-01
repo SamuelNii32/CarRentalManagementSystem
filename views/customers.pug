@@ -97,14 +97,14 @@ block content
 
               .customer-stats
                 .stat-item
-                  .stat-value.blue= customer.totalRentals
+                  .stat-value.blue= typeof customer.totalRentals !== 'undefined' ? customer.totalRentals : 0
                   .stat-label Total Rentals
                 .stat-item
-                  .stat-value.green $#{customer.totalSpent}
+                  .stat-value.green $#{customer.totalSpent ? customer.totalSpent.toFixed(2) : "0.00"}
                   .stat-label Total Spent
                 .last-rental
                   .stat-label Last Rental
-                  .stat-value= customer.lastRental
+                  .stat-value= customer.lastRentalFormatted
               .action-buttons
                 button.btn.btn-outline.btn-sm(type="button", onclick=`openViewRentalsModal('${customer._id}')`)
                   i.fas.fa-car

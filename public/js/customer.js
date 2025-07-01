@@ -173,7 +173,6 @@ function saveCustomer() {
       showToast("Error", "Error saving customer");
     });
 }
-
 function confirmDeleteCustomer() {
   const modal = document.getElementById("deleteConfirmationModal");
   const customerId = modal.getAttribute("data-id");
@@ -181,7 +180,7 @@ function confirmDeleteCustomer() {
   fetch(`/admin/customers/${customerId}/delete`, {
     method: "POST",
   })
-    .then((res) => {
+    .then(async (res) => {
       if (res.ok) {
         showToast("Success", "Customer deleted successfully.");
         closeDeleteConfirmationModal();
@@ -189,10 +188,13 @@ function confirmDeleteCustomer() {
           window.location.reload();
         }, 500);
       } else {
-        throw new Error("Failed to delete customer");
+        const errorText = await res.text();
+        console.error("Server responded with error:", errorText);
+        throw new Error(errorText || "Failed to delete customer.");
       }
     })
-    .catch(() => {
-      showToast("Error", "Error deleting customer");
+    .catch((err) => {
+      console.error("Fetch delete error:", err);
+      showToast("Error", err.message || "Error deleting customer.");
     });
 }

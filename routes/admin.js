@@ -38,8 +38,8 @@ router.post("/vehicle", upload.single("image"), async (req, res) => {
   try {
     const carData = {
       ...req.body,
-      imageUrl: req.file ? `/uploads/${req.file.filename}` : "", // store relative URL
-      available: req.body.available === "true", // convert string to boolean
+      imageUrl: req.file ? `/uploads/${req.file.filename}` : "",
+      available: req.body.available === "true",
     };
 
     await Car.create(carData);
@@ -89,10 +89,21 @@ router.put("/vehicle/:id", upload.single("image"), async (req, res) => {
 router.delete("/vehicle/:id", async (req, res) => {
   try {
     const id = req.params.id;
+
+    // Check if any rentals are using this vehicle
+    const rentalCount = await Rental.countDocuments({ vehicle: id });
+
+    if (rentalCount > 0) {
+      return res
+        .status(400)
+        .send("Cannot delete vehicle: It has associated rentals.");
+    }
+
     const deleted = await Car.findByIdAndDelete(id);
     if (!deleted) {
       return res.status(404).send("Vehicle not found");
     }
+
     res.sendStatus(200);
   } catch (error) {
     res.status(500).send("Error deleting vehicle: " + error.message);
@@ -112,12 +123,12 @@ function getStatusBadgeClass(status) {
   }
 }
 
-// List all the customers
+// List all the customers with rentals stats
 router.get("/customers", async (req, res) => {
   try {
     const customers = await Customer.find().sort({ name: 1 });
 
-    // Step 1: Calculate summary stats
+    // Step 1: Calculate summary stats for dashboard
     const totalCustomers = await Customer.countDocuments();
     const vipCustomers = await Customer.countDocuments({ status: "VIP" });
     const newCustomersThisMonth = await Customer.countDocuments({
@@ -125,6 +136,7 @@ router.get("/customers", async (req, res) => {
         $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
       },
     });
+
     const avgRatingAgg = await Customer.aggregate([
       { $group: { _id: null, avgRating: { $avg: "$rating" } } },
     ]);
@@ -132,11 +144,38 @@ router.get("/customers", async (req, res) => {
       ? avgRatingAgg[0].avgRating.toFixed(1)
       : "N/A";
 
-    // Step 2: Pass everything to the view
+    // Step 2: Add rental stats to each customer
+    const customersWithStats = await Promise.all(
+      customers.map(async (customer) => {
+        const rentals = await Rental.find({ customer: customer._id }).sort({
+          startDate: -1,
+        });
+
+        const totalRentals = rentals.length;
+        const totalSpent = rentals.reduce(
+          (sum, rental) => sum + rental.totalAmount,
+          0
+        );
+        const lastRental = rentals[0];
+        const cleanName = customer.name.replace(/\s+/g, " ").trim();
+
+        return {
+          ...customer.toObject(),
+          name: cleanName,
+          totalRentals,
+          totalSpent,
+          lastRentalFormatted: lastRental
+            ? new Date(lastRental.startDate).toISOString().substring(0, 10)
+            : "N/A",
+        };
+      })
+    );
+
+    // Step 3: Render the view
     res.render("customers", {
       title: "Customer Management",
       activePage: "customers",
-      customers,
+      customers: customersWithStats,
       getStatusBadgeClass,
       totalCustomers,
       vipCustomers,
@@ -187,13 +226,22 @@ router.post("/customers/:id", async (req, res) => {
 // Handle customer deletion (server-rendered)
 router.post("/customers/:id/delete", async (req, res) => {
   try {
-    await Customer.findByIdAndDelete(req.params.id);
+    const customerId = req.params.id;
+
+    // Check if customer has any rentals
+    const rentalCount = await Rental.countDocuments({ customer: customerId });
+    if (rentalCount > 0) {
+      return res
+        .status(400)
+        .send("Cannot delete customer: They have associated rentals.");
+    }
+
+    await Customer.findByIdAndDelete(customerId);
     res.redirect("/admin/customers");
   } catch (error) {
     res.status(500).send("Error deleting customer: " + error.message);
   }
 });
-
 //  API endpoint: Get single customer data by ID (JSON)**
 router.get("/customers/:id", async (req, res) => {
   try {
@@ -233,6 +281,8 @@ router.get("/rentals", async (req, res) => {
       .populate("customer")
       .sort({ startDate: -1 });
 
+    const validRentals = rentals.filter((r) => r.customer && r.vehicle);
+
     const customers = await Customer.find().sort({ name: 1 });
     const vehicles = await Car.find().sort({ name: 1, year: -1 });
 
@@ -262,7 +312,7 @@ router.get("/rentals", async (req, res) => {
     res.render("rentals", {
       title: "Rental Management",
       activePage: "rentals",
-      rentals,
+      rentals: validRentals,
       customers,
       vehicles,
       activeRentals,
@@ -289,7 +339,6 @@ router.get("/rentals/:id", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
 router.post("/rentals", async (req, res) => {
   try {
     const { customerId, vehicleId, startDate, endDate, dailyRate } = req.body;
@@ -317,10 +366,19 @@ router.post("/rentals", async (req, res) => {
 
     await rental.save();
 
+    //
+    await Customer.findByIdAndUpdate(customerId, {
+      $inc: {
+        totalRentals: 1,
+        totalSpent: totalAmount,
+      },
+    });
+
     res.status(201).json({ message: "Rental created", rental });
   } catch (err) {
     console.error("Error creating rental:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 export default router;

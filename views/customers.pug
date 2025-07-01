@@ -1,0 +1,194 @@
+extends layout
+
+block content
+  .main-content.customers-page
+    .container
+      // Header
+      .header
+        .header-content
+          h1 Customer Management
+          p Manage your customer base and relationships
+        button.btn.btn-primary(onclick="openAddCustomerModal()")
+          i.fas.fa-user
+          |  Add Customer
+
+      // Customer Summary
+      .summary-grid
+        .card.summary-card
+          .summary-content
+            .summary-text
+              p Total Customers
+              .summary-value#totalCustomers #{totalCustomers}
+            .summary-icon.blue
+              i.fas.fa-user
+        .card.summary-card
+          .summary-content
+            .summary-text
+              p VIP Customers
+              .summary-value.text-purple#vipCustomers #{vipCustomers}
+            .summary-icon.purple
+              i.fas.fa-star
+        .card.summary-card
+          .summary-content
+            .summary-text
+              p New This Month
+              .summary-value.text-green#newCustomers  #{newCustomersThisMonth}
+            .summary-icon.green
+              i.fas.fa-user
+        .card.summary-card
+          .summary-content
+            .summary-text
+              p Avg. Rating
+              .summary-value.text-yellow#avgRating #{avgRating}
+            .summary-icon.yellow
+              i.fas.fa-star
+
+      // Customer List Grid
+      .customer-grid#customerGrid
+        each customer in customers
+          .card.customer-card(data-id=customer._id)
+            .card-header
+              .customer-header
+                .customer-info
+                  .customer-avatar
+                    i.fas.fa-user
+                  .customer-details
+                    h3= customer.name
+                    .customer-rating
+                      i.fas.fa-star
+                      span= customer.rating
+                .customer-actions
+                  span.badge(class=getStatusBadgeClass(customer.status))= customer.status
+                  .action-buttons-header
+                    button.btn.btn-outline.btn-xs(
+                      type="button",
+                      onclick=`openViewCustomerModal('${customer._id}')`,
+                      title="View Details"
+                    )
+                      i.fas.fa-eye
+                    button.btn.btn-outline.btn-xs(
+                      type="button",
+                      onclick="openEditCustomerModal(this)",
+                      title="Edit Customer",
+                      data-customer= JSON.stringify(customer)
+
+                    )
+                      i.fas.fa-edit
+                    button.btn.btn-outline.btn-xs(
+                      type="button",
+                      onclick=`openDeleteConfirmationModal('${customer._id}')`,
+                      title="Delete Customer"
+                    )
+                      i.fas.fa-trash
+            .card-content
+              .contact-info
+                .contact-item
+                  i.fas.fa-envelope
+                  span= customer.email
+                .contact-item
+                  i.fas.fa-phone
+                  span= customer.phone
+                .contact-item
+                  i.fas.fa-map-marker-alt
+                  span= customer.address
+                .contact-item
+                  i.fas.fa-calendar
+                  span Joined #{customer.joinedAt ? customer.joinedAt.toISOString().substring(0, 10) : "N/A"}
+
+              .customer-stats
+                .stat-item
+                  .stat-value.blue= customer.totalRentals
+                  .stat-label Total Rentals
+                .stat-item
+                  .stat-value.green $#{customer.totalSpent}
+                  .stat-label Total Spent
+                .last-rental
+                  .stat-label Last Rental
+                  .stat-value= customer.lastRental
+              .action-buttons
+                button.btn.btn-outline.btn-sm(type="button", onclick=`openViewRentalsModal('${customer._id}')`)
+                  i.fas.fa-car
+                  |  View Rentals
+                button.btn.btn-outline.btn-sm(type="button", onclick=`openContactCustomer('${customer._id}')`)
+                  i.fas.fa-envelope
+                  |  Contact
+
+    // Customer View Modal
+    #customerViewModal.modal
+      .modal-content
+        .modal-header
+          h3.modal-title Customer Details
+          button.modal-close(type="button" onclick="closeCustomerViewModal()") &times;
+        .modal-body#customerViewBody
+        .modal-footer
+          button.btn.btn-outline(type="button" onclick="closeCustomerViewModal()") Close
+
+    // Customer Form Modal (Add/Edit)
+    #customerFormModal.modal
+      .modal-content
+        .modal-header
+          h3.modal-title#formModalTitle Add Customer
+          button.modal-close(type="button" onclick="closeCustomerFormModal()") &times;
+        .modal-body
+          form#customerForm
+            .form-row
+              .form-group
+                label.form-label Full Name
+                input.form-input(type="text", name="name", required)
+              .form-group
+                label.form-label Email
+                input.form-input(type="email", name="email", required)
+            .form-row
+              .form-group
+                label.form-label Phone
+                input.form-input(type="tel", name="phone", required)
+              .form-group
+                label.form-label Status
+                select.form-select(name="status", required)
+                  option(value="New") New
+                  option(value="Active") Active
+                  option(value="VIP") VIP
+            .form-group
+              label.form-label Address
+              textarea.form-textarea(name="address", rows="3", required)
+            .form-row
+              .form-group
+                label.form-label Join Date
+                input.form-input(type="date", name="joinDate", required)
+              .form-group
+                label.form-label Rating
+                input.form-input(type="number", name="rating", min="1", max="5", step="0.1", value="5.0", required)
+        .modal-footer
+          button.btn.btn-outline(type="button" onclick="closeCustomerFormModal()") Cancel
+          button.btn.btn-primary(type="button" onclick="saveCustomer()") Save Customer
+
+    // Customer Rentals Modal
+    #customerRentalsModal.modal
+      .modal-content
+        .modal-header
+          h3.modal-title Customer Rental History
+          button.modal-close(type="button" onclick="closeCustomerRentalsModal()") &times;
+        .modal-body#customerRentalsBody
+        .modal-footer
+          button.btn.btn-outline(type="button" onclick="closeCustomerRentalsModal()") Close
+
+    // Delete Confirmation Modal
+    #deleteConfirmationModal.modal
+      .modal-content.small
+        .modal-header
+          h3.modal-title Delete Customer
+          button.modal-close(type="button" onclick="closeDeleteConfirmationModal()") &times;
+        .modal-body
+          .delete-confirmation
+            p#deleteMessage Are you sure you want to delete this customer? This action cannot be undone.
+        .modal-footer
+          button.btn.btn-outline(type="button" onclick="closeDeleteConfirmationModal()") Cancel
+          button.btn.btn-danger(type="button" onclick="confirmDeleteCustomer()") Delete
+
+    // Toast Notification
+    #toast.toast
+      #toastTitle.toast-title
+      #toastDescription.toast-description
+
+block scripts
+  script(src="/js/customer.js")

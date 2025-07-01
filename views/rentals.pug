@@ -1,0 +1,158 @@
+extends layout
+
+block content
+  .rentals-page
+    // Header
+    .header
+      .header-content
+        h1 Rental Management
+        p Track and manage all rental bookings
+      button.btn.btn-primary(type="button", onclick="openNewBookingModal()")
+        i.fas.fa-calendar
+        |  New Booking
+
+    // Rental Summary
+    .summary-grid
+      .card.summary-card
+        .summary-content
+          .summary-text
+            p Active Rentals
+            .summary-value.text-green #{activeRentals}
+          .summary-icon.green
+            i.fas.fa-calendar
+      .card.summary-card
+        .summary-content
+          .summary-text
+            p Confirmed
+            .summary-value.text-blue #{confirmedRentals}
+          .summary-icon.blue
+            i.fas.fa-clock
+      .card.summary-card
+        .summary-content
+          .summary-text
+            p Completed
+            .summary-value.text-gray #{completedRentals}
+          .summary-icon.gray
+            i.fas.fa-calendar
+      .card.summary-card
+        .summary-content
+          .summary-text
+            p Overdue
+            .summary-value.text-red #{overdueRentals}
+          .summary-icon.red
+            i.fas.fa-clock
+
+    // Rentals List
+    .card
+      .card-header
+        h2.card-title Recent Rentals
+      .card-content
+        #rentalsList
+          each rental in rentals
+            .rental-item
+              .rental-header
+                .rental-customer
+                  .customer-avatar
+                    i.fas.fa-user
+                  .customer-info
+                    h3= rental.customer.name
+                    p= rental.customer.phone
+                .rental-actions
+                  span.badge(class=`badge-${rental.status.toLowerCase()}`)= rental.status
+                  button.btn.btn-outline.btn-sm(type="button", onclick=`openRentalViewModal('${rental._id}')`)
+                    i.fas.fa-eye
+                    |  View
+
+              .rental-details
+                .detail-item
+                  i.fas.fa-car
+                  .detail-content
+                    p Vehicle
+                    p #{rental.vehicle.name} #{rental.vehicle.year}
+                .detail-item
+                  i.fas.fa-calendar
+                  .detail-content
+                    p Rental Period
+                    p #{rental.startDate.toISOString().substring(0,10)} to #{rental.endDate.toISOString().substring(0,10)}
+                .detail-item
+                  i.fas.fa-clock
+                  .detail-content
+                    p Duration
+                    if rental.status === 'Overdue'
+                      p #{rental.overdueDays || 0} days overdue
+                    else
+                      p #{rental.durationDays || 0} days
+                .detail-item
+                  i.fas.fa-dollar-sign
+                  .detail-content
+                    p Total Amount
+                    p.amount $#{rental.totalAmount}
+
+              .rental-footer
+                p Booking ID: #{rental.bookingId} • Daily Rate: $#{rental.dailyRate}
+
+    // Rental View Modal
+    #rentalViewModal.modal
+      .modal-content
+        .modal-header
+          h3.modal-title
+            i.fas.fa-car
+            span#rentalModalTitle Rental Details
+          button.modal-close(type="button", onclick="closeRentalViewModal()") &times;
+        .modal-body#rentalViewBody
+
+    // New Booking Modal
+    #newBookingModal.modal
+      .modal-content.small
+        .modal-header
+          h3.modal-title
+            i.fas.fa-calendar
+            |  New Rental Booking
+          button.modal-close(type="button", onclick="closeNewBookingModal()") &times;
+        .modal-body
+          form#bookingForm
+            .form-group
+              label.form-label
+                i.fas.fa-user
+                |  Customer *
+              select.form-select(name="customerId", required)
+                option(value="" disabled selected) Select a customer
+                each customer in customers
+                  option(value=customer._id)= customer.name
+            .form-group
+              label.form-label Phone Number
+              input.form-input(type="tel", name="phone", placeholder="+1 (555) 123-4567")
+            .form-group
+              label.form-label
+                i.fas.fa-car
+                |  Vehicle *
+              select.form-select(name="vehicleId", required)
+                option(value="" disabled selected) Select a vehicle
+                each vehicle in vehicles
+                  option(value=vehicle._id)= vehicle.name + ' ' + vehicle.year
+            .form-row
+              .form-group
+                label.form-label Start Date *
+                input.form-input(type="date", name="startDate", required)
+              .form-group
+                label.form-label End Date *
+                input.form-input(type="date", name="endDate", required)
+            .form-group
+              label.form-label
+                i.fas.fa-dollar-sign
+                |  Daily Rate *
+              input.form-input(type="number", name="dailyRate", step="0.01", placeholder="45.00", required)
+            .form-actions
+              button.btn.btn-outline(type="button", onclick="closeNewBookingModal()") Cancel
+              button.btn.btn-primary(type="submit") Create Booking
+
+    // Toast Notification
+    #toast.toast
+      #toastTitle.toast-title
+      #toastDescription.toast-description
+
+block scripts
+  script.
+    window.customersData = !{JSON.stringify(customers)};
+    window.vehiclesData = !{JSON.stringify(vehicles)};
+  script(src="/js/rentals.js")

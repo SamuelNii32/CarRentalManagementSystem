@@ -1,0 +1,78 @@
+extends layout
+
+block content
+  .dashboard-container
+    //- Header
+    .dashboard-header
+      .header-left
+        h1 Dashboard Overview
+        p Welcome back! Here's what's happening with your rental business.
+      .header-right
+        p Last updated
+        p#lastUpdated
+
+    //- Key Metrics
+    .metrics-grid
+      .card
+        .card-header
+          .card-title Total Vehicles
+          i.fas.fa-car.metric-icon.blue
+        .card-content
+          .metric-value 143
+          .metric-change.positive
+            i.fas.fa-arrow-up
+            | +5% from last month
+
+      .card
+        .card-header
+          .card-title Active Rentals
+          i.fas.fa-calendar-alt.metric-icon.green
+        .card-content
+          .metric-value 73
+          .metric-change.positive
+            i.fas.fa-arrow-up
+            | +12% from last month
+
+      .card
+        .card-header
+          .card-title Total Customers
+          i.fas.fa-users.metric-icon.purple
+        .card-content
+          .metric-value 1,247
+          .metric-change.positive
+            i.fas.fa-arrow-up
+            | +8% from last month
+
+      .card
+        .card-header
+          .card-title Monthly Revenue
+          i.fas.fa-dollar-sign.metric-icon.yellow
+        .card-content
+          .metric-value $28,450
+          .metric-change.negative
+            i.fas.fa-arrow-down
+            | -2% from last month
+
+    //- Charts
+    .charts-grid
+      .card
+        .card-header
+          .card-title(style="font-size: 1.125rem; font-weight: 600; color: #111827;") Monthly Revenue
+        .card-content
+          .chart-container
+            canvas#revenueChart.chart-canvas
+
+      .card
+        .card-header
+          .card-title(style="font-size: 1.125rem; font-weight: 600; color: #111827;") Rental Trends
+        .card-content
+          .chart-container
+            canvas#rentalChart.chart-canvas
+
+    //- Recent Activity
+    .card
+      .card-header
+        .card-title(style="font-size: 1.125rem; font-weight: 600; color: #111827;") Recent Activity
+      .card-content
+        .activity-list#activityList
+          //- Populated by JS

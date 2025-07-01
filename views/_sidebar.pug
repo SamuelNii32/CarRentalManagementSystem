@@ -1,0 +1,40 @@
+//- Mobile Toggle Button
+button.mobile-toggle#mobileToggle
+  i.fas.fa-bars
+
+//- Mobile Overlay
+div#overlay.overlay
+
+//- Admin Sidebar
+div#adminSidebar.admin-sidebar
+  //- Sidebar Header
+  div.sidebar-header
+    h1.sidebar-title
+      i.fas.fa-car.sidebar-title-icon
+      | RentalRoster
+    p.sidebar-subtitle Admin Control Panel
+
+  //- Navigation
+  nav.sidebar-nav
+    div#navMenu.nav-menu
+      a.nav-item(class=activePage === 'dashboard' ? 'active' : '', href='/')
+        i.fas.fa-chart-bar.nav-icon
+        | Dashboard
+      a.nav-item(class=activePage === 'vehicles' ? 'active' : '', href='/admin/vehicles')
+        i.fas.fa-car.nav-icon
+        | Vehicles
+      a.nav-item(class=activePage === 'rentals' ? 'active' : '', href='/admin/rentals')
+        i.fas.fa-calendar-alt.nav-icon
+        | Rentals
+      a.nav-item(class=activePage === 'customers' ? 'active' : '', href='/admin/customers')
+        i.fas.fa-users.nav-icon
+        | Customers
+
+  //- Bottom Section
+  div.sidebar-bottom
+    a.bottom-item(href='/settings')
+      i.fas.fa-cog.nav-icon
+      | Settings
+    button.bottom-item(onclick="handleLogout()")
+      i.fas.fa-sign-out-alt.nav-icon
+      | Logout

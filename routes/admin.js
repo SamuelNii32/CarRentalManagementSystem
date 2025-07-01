@@ -282,33 +282,37 @@ router.get("/rentals", async (req, res) => {
       .sort({ startDate: -1 });
 
     const validRentals = rentals.filter((r) => r.customer && r.vehicle);
-
     const customers = await Customer.find().sort({ name: 1 });
     const vehicles = await Car.find().sort({ name: 1, year: -1 });
 
-    // Count each status
     const today = new Date();
 
-    const activeRentals = rentals.filter((rental) => {
-      return (
-        rental.status === "Confirmed" &&
-        new Date(rental.startDate) <= today &&
-        new Date(rental.endDate) >= today
-      );
-    }).length;
+    // Initialize counters
+    let activeRentals = 0;
+    let confirmedRentals = 0;
+    let completedRentals = 0;
+    let overdueRentals = 0;
 
-    const confirmedRentals = rentals.filter(
-      (r) => r.status === "Confirmed" && new Date(r.startDate) > today
-    ).length;
+    // 🔁 Categorize + override statuses for rendering
+    validRentals.forEach((rental) => {
+      const start = new Date(rental.startDate);
+      const end = new Date(rental.endDate);
 
-    const completedRentals = rentals.filter(
-      (r) => r.status === "Completed"
-    ).length;
+      if (rental.status === "Completed") {
+        completedRentals++;
+      } else if (start > today) {
+        confirmedRentals++;
+        rental.status = "Confirmed";
+      } else if (start <= today && end >= today) {
+        activeRentals++;
+        rental.status = "Active";
+      } else if (end < today) {
+        overdueRentals++;
+        rental.status = "Overdue";
+      }
+    });
 
-    const overdueRentals = rentals.filter((r) => {
-      return r.status === "Active" && new Date(r.endDate) < today;
-    }).length;
-
+    // ✅ Render view
     res.render("rentals", {
       title: "Rental Management",
       activePage: "rentals",
@@ -325,20 +329,6 @@ router.get("/rentals", async (req, res) => {
   }
 });
 
-// Get a single rental data by id
-router.get("/rentals/:id", async (req, res) => {
-  try {
-    const rental = await Rental.findById(req.params.id)
-      .populate("vehicle")
-      .populate("customer");
-
-    if (!rental) return res.status(404).json({ message: "Rental not found" });
-
-    res.json(rental);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
 router.post("/rentals", async (req, res) => {
   try {
     const { customerId, vehicleId, startDate, endDate, dailyRate } = req.body;

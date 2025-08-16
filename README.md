@@ -35,6 +35,8 @@ This app is deployed live on Render:
 
 🔗 Live Admin Dashboard
 
+https://carrentalmanagementsystem-vufm.onrender.com
+
 
 
 🛠️ How to Run Locally

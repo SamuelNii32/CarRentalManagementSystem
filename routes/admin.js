@@ -253,6 +253,46 @@ router.get("/customers/:id", async (req, res) => {
   }
 });
 
+// API endpoint: Update customer (for React)
+router.put("/customers/:id", async (req, res) => {
+  try {
+    const updatedCustomer = await Customer.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    if (!updatedCustomer)
+      return res.status(404).json({ error: "Customer not found" });
+    res.json(updatedCustomer);
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// API endpoint: Delete customer (for React)
+router.delete("/customers/:id", async (req, res) => {
+  try {
+    const customerId = req.params.id;
+
+    // Check if customer has any rentals
+    const rentalCount = await Rental.countDocuments({ customer: customerId });
+    if (rentalCount > 0) {
+      return res.status(400).json({
+        error: "Cannot delete customer: They have associated rentals.",
+      });
+    }
+
+    const deletedCustomer = await Customer.findByIdAndDelete(customerId);
+    if (!deletedCustomer)
+      return res.status(404).json({ error: "Customer not found" });
+
+    res.json({ message: "Customer deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // API endpoint for all vehicles (JSON)
 router.get("/api/vehicles", async (req, res) => {
   try {
@@ -307,8 +347,18 @@ router.get("/rentals", async (req, res) => {
         activeRentals++;
         rental.status = "Active";
       } else if (end < today) {
-        overdueRentals++;
-        rental.status = "Overdue";
+        // Calculate days since rental ended
+        const daysOverdue = Math.floor((today - end) / (1000 * 60 * 60 * 24));
+
+        if (daysOverdue > 30) {
+          // If rental ended more than 30 days ago, consider it completed
+          completedRentals++;
+          rental.status = "Completed";
+        } else {
+          overdueRentals++;
+          rental.status = "Overdue";
+          rental.overdueDays = daysOverdue;
+        }
       }
     });
 
@@ -368,6 +418,49 @@ router.post("/rentals", async (req, res) => {
   } catch (err) {
     console.error("Error creating rental:", err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// API endpoint - Get rentals data
+router.get("/api/rentals", async (req, res) => {
+  try {
+    const rentals = await Rental.find()
+      .populate("vehicle")
+      .populate("customer")
+      .sort({ startDate: -1 });
+
+    const validRentals = rentals.filter((r) => r.customer && r.vehicle);
+
+    const today = new Date();
+
+    // Apply status logic based on dates
+    validRentals.forEach((rental) => {
+      const start = new Date(rental.startDate);
+      const end = new Date(rental.endDate);
+
+      if (rental.status === "Completed") {
+        // Keep as completed
+      } else if (start > today) {
+        rental.status = "Confirmed";
+      } else if (start <= today && end >= today) {
+        rental.status = "Active";
+      } else if (end < today) {
+        // Calculate days since rental ended
+        const daysOverdue = Math.floor((today - end) / (1000 * 60 * 60 * 24));
+
+        if (daysOverdue > 30) {
+          // If rental ended more than 30 days ago, consider it completed
+          rental.status = "Completed";
+        } else {
+          rental.status = "Overdue";
+          rental.overdueDays = daysOverdue;
+        }
+      }
+    });
+
+    res.json(validRentals);
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
   }
 });
 
